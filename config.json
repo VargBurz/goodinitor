@@ -1,0 +1,12 @@
+[
+  {
+    "venue": "Bubble Tea",
+    "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/mao-bubble-tea/assortment",
+    "names": ["buldak (pink)"]
+  },
+  {
+    "venue": "Best Friends",
+    "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/best-friends1/assortment/categories/slug/sauces-and-pates-for-cat-2?language=en",
+    "names": ["Wellfed (Pate for Sterelized cat, with beef & salmon)", "Wellfed (Pate for sterilized cat, with chicken & Turkey)"]
+  }
+]
