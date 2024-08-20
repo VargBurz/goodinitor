@@ -8,5 +8,15 @@
     "venue": "Best Friends",
     "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/best-friends1/assortment/categories/slug/sauces-and-pates-for-cat-2?language=en",
     "names": ["Wellfed (Pate for Sterelized cat, with beef & salmon)", "Wellfed (Pate for sterilized cat, with chicken & Turkey)"]
+  },
+  {
+    "venue": "Gastronome Chavchavadze",
+    "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/gastronome/assortment/categories/slug/yogurt-36?language=en",
+    "names": ["PASTORET-კეფირი დასალევი მანგოთი 250გრ"]
+  },
+  {
+    "venue": "Gastronome Abashidze",
+    "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/gastronome-vake/assortment/categories/slug/yogurt-36?language=en",
+    "names": ["PASTORET-კეფირი დასალევი მანგოთი 250გრ"]
   }
 ]
