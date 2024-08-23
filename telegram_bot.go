@@ -40,7 +40,7 @@ func sendTelegramMessage(message string) error {
 	data.Set("chat_id", chatID)
 	data.Set("text", message)
 	data.Set("parse_mode", "Markdown")
-	fmt.Println("Sending message to Telegram chat:")
+	fmt.Println("[sendTelegramMessage] Sending message to Telegram chat:")
 	// Send the message via POST request
 	response, err := http.PostForm(apiURL, data)
 	if err != nil {

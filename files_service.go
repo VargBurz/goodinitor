@@ -32,6 +32,7 @@ func loadConfig(filename string) ([]Config, error) {
 
 // Write results to a file in the specified format
 func writeResultsToFile(results []Result, filename string) error {
+    fmt.Printf("[writeResultsToFile] Writing results to %s\n", filename)
     data, err := json.MarshalIndent(results, "", "  ")
     if err != nil {
         return fmt.Errorf("error marshalling results: %v", err)
