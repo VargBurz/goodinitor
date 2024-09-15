@@ -10,7 +10,8 @@ import (
 )
 
 
-const timeout = 30 // minutes
+const woltParseTimeout = 30 // minutes
+const telegramCheckTimeout = 15 // seconds
 
 type WebImage struct {
     URL string `json:"url"`
@@ -42,6 +43,41 @@ type Config struct {
     Endpoint string   `json:"endpoint"`
     Names    []string `json:"names"`
     Venue    string   `json:"venue"`
+}
+
+// send test message to telegram from bot
+func httpHandler(w http.ResponseWriter, r *http.Request) {
+    message := "Hello from Telegram Bot!"
+    err := sendTelegramMessage(message)
+    if err != nil {
+        fmt.Fprintf(w, "Failed to send message: %v", err)
+        return
+    }
+	fmt.Fprintf(w, "Message sent to Telegram!")
+}
+
+func containsStatus(text string) bool {
+	// Convert text to lowercase
+	lowerText := strings.ToLower(text)
+
+	// Check if "status" is present
+	return strings.Contains(lowerText, "status")
+}
+
+func formatResultsMessage(results []Result) string {
+    var messageBuilder strings.Builder
+
+    for _, result := range results {
+        status := "out of stock"
+        if result.Founded {
+            status = "available"
+        }
+        // Append the formatted string to the message
+        messageBuilder.WriteString(fmt.Sprintf("%s | *%s* is %s\n", result.Venue, result.Name, status))
+    }
+
+    // Convert the message builder to a string
+    return messageBuilder.String()
 }
 
 // Perform the GET request and parse the JSON response
@@ -101,7 +137,7 @@ func compareResults(newResults []Result, existingResults map[string]Result) {
                 } else {
                     statusMessage = "The product is out of stock..."
                 }
-                message := fmt.Sprintf("[compareResults] **Product**: %s\n**Venue**: %s\n**Status**: %s\n![image](%s)", newResult.Name, newResult.Venue, statusMessage, newResult.Image)
+                message := fmt.Sprintf("**Product**: %s\n**Venue**: %s\n**Status**: %s\n![image](%s)", newResult.Name, newResult.Venue, statusMessage, newResult.Image)
                 err := sendTelegramMessage(message)
                 if err != nil {
                     fmt.Printf("Failed to send message: %v\n", err)
@@ -159,36 +195,86 @@ func main() {
         return
     }
 
-    for {
-        fmt.Println("[main] Starting new iteration: ", time.Now().Format("02-01 15:04:05"))
-        existingResults, err := loadExistingResults("store.json")
-        if err != nil {
-            fmt.Println("Error loading existing results:", err)
-            return
-        }
-
-        var allResults []Result
-
-        for _, config := range configs {
-            fmt.Printf("[main] Start processing config for venue: %s\n", config.Venue)
-            results, err := processConfig(config)
+    // Run the 30-minute loop in a goroutine
+    go func() {
+        for {
+            fmt.Println("[main] Starting new iteration: ", time.Now().Format("02-01 15:04:05"))
+            existingResults, err := getResultsMap()
             if err != nil {
-                fmt.Println("Error processing config:", err)
+                fmt.Println("Error loading existing results:", err)
+                return
+            }
+
+            var allResults []Result
+
+            for _, config := range configs {
+                fmt.Printf("[main] Start processing config for venue: %s\n", config.Venue)
+                results, err := processConfig(config)
+                if err != nil {
+                    fmt.Println("Error processing config:", err)
+                    continue
+                }
+                fmt.Printf("[main] Config processed successfully for venue: %s\n", config.Venue)
+                // Compare the new results with existing results and send to Telegram
+                compareResults(results, existingResults)
+
+                allResults = append(allResults, results...)
+            }
+
+            err = writeResultsToFile(allResults, "store.json")
+            if err != nil {
+                fmt.Println("Error writing results to file:", err)
+            } else {
+                fmt.Println("Results successfully written to store.json")
+            }
+            time.Sleep(woltParseTimeout * time.Minute)
+        }
+    }()
+
+    offset := 0
+    // Run the 15-seconds loop in another goroutine
+    go func() {
+		for {
+            updates, err := getUpdates(offset)
+            if err != nil {
+                fmt.Printf("Error getting updates: %v\n", err)
                 continue
             }
-            fmt.Printf("[main] Config processed successfully for venue: %s\n", config.Venue)
-            // Compare the new results with existing results and send to Telegram
-            compareResults(results, existingResults)
+            for _, update := range updates {
+                // Print the received message
+                fmt.Printf("New message from %s: %s\n", update.Message.From.Username, update.Message.Text)
+                containsStatus := containsStatus(update.Message.Text)
+                if containsStatus {
+                    fmt.Println("The message contains the word 'status'")
+                    existingResults, err := loadExistingResults()
+                    if err != nil {
+                        fmt.Println("Error loading existing results:", err)
+                        return
+                    }
+                    resultsMessage := formatResultsMessage(existingResults)
+                    fmt.Println("loading existing results:", resultsMessage)
+                    err = sendTelegramMessage(resultsMessage)
+                    if err != nil {
+                        fmt.Println("Error sending message:", err)
+                    }
+                }
+                // Update offset to the latest update ID + 1 to avoid fetching the same message again
+                offset = update.UpdateID + 1
+            }
+			// Your code for the 15-seconds task here
+			time.Sleep(telegramCheckTimeout * time.Second)
+		}
+	}()
 
-            allResults = append(allResults, results...)
+    // Start the HTTP server in a separate goroutine
+    go func() {
+        http.HandleFunc("/send-text", httpHandler)
+        if err := http.ListenAndServe(":8088", nil); err != nil {
+            fmt.Println("Error starting server:", err)
+            return
         }
+    }()
 
-        err = writeResultsToFile(allResults, "store.json")
-        if err != nil {
-            fmt.Println("Error writing results to file:", err)
-        } else {
-            fmt.Println("Results successfully written to store.json")
-        }
-        time.Sleep(timeout * time.Minute)
-    }
+    // Keep the main function alive with an infinite loop
+	select {} // This blocks the main function forever to keep the program running
 }

@@ -47,13 +47,24 @@ func writeResultsToFile(results []Result, filename string) error {
 }
 
 // Load existing results from store.json
-func loadExistingResults(filename string) (map[string]Result, error) {
-    file, err := os.Open(filename)
+func getResultsMap() (map[string]Result, error) {
+    existingResults, err := loadExistingResults()
     if err != nil {
-        if os.IsNotExist(err) {
-            // If file doesn't exist, return an empty map
-            return make(map[string]Result), nil
-        }
+        return nil, fmt.Errorf("error loading existing results: %v", err)
+    }
+
+    existingMap := make(map[string]Result)
+    for _, res := range existingResults {
+        existingMap[res.Name] = res
+    }
+
+    return existingMap, nil
+}
+
+// Load existing results from store.json
+func loadExistingResults() ([]Result, error) {
+    file, err := os.Open("store.json")
+    if err != nil {
         return nil, fmt.Errorf("error opening store file: %v", err)
     }
     defer file.Close()
@@ -69,10 +80,5 @@ func loadExistingResults(filename string) (map[string]Result, error) {
         return nil, fmt.Errorf("error parsing store file: %v", err)
     }
 
-    existingMap := make(map[string]Result)
-    for _, res := range existingResults {
-        existingMap[res.Name] = res
-    }
-
-    return existingMap, nil
+    return existingResults, nil
 }
