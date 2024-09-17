@@ -1,7 +1,3 @@
-Here’s a draft of the `README.md` for the Goods Monitoring app:
-
----
-
 # Goods Monitoring
 
 Goods Monitoring is a tool that checks the availability of specific products in various online venues, based on a predefined configuration. If there is a change in the availability status of a product, the app will send a notification to a configured Telegram chat.
