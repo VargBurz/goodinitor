@@ -3,7 +3,7 @@ package main
 import (
     "encoding/json"
     "fmt"
-    "io/ioutil"
+    "io"
     "net/http"
     "strings"
     "time"
@@ -88,7 +88,7 @@ func fetchItems(endpoint string) (*AssortmentResponse, error) {
     }
     defer response.Body.Close()
 
-    body, err := ioutil.ReadAll(response.Body)
+    body, err := io.ReadAll(response.Body)
     if err != nil {
         return nil, fmt.Errorf("error reading response body: %v", err)
     }
@@ -124,8 +124,8 @@ func searchItems(assortment *AssortmentResponse, searchNames []string) map[strin
     return matchingItems
 }
 
-// Compare results with the existing results and send differences to Telegram
-func compareResults(newResults []Result, existingResults map[string]Result) {
+// Compare fetched results with the existing results and send differences to Telegram
+func compareResults(newResults []Result, existingResults []Result) {
     for _, newResult := range newResults {
         if existingResult, exists := existingResults[newResult.Name]; exists {
             fmt.Printf("[compareResults] Product: %s\n, old status: %b\n, new status: %b\n", newResult.Name, existingResult.Founded, newResult.Founded)
@@ -199,7 +199,7 @@ func main() {
     go func() {
         for {
             fmt.Println("[main] Starting new iteration: ", time.Now().Format("02-01 15:04:05"))
-            existingResults, err := getResultsMap()
+            existingResults, err := loadExistingResults()
             if err != nil {
                 fmt.Println("Error loading existing results:", err)
                 return
@@ -208,13 +208,13 @@ func main() {
             var allResults []Result
 
             for _, config := range configs {
-                fmt.Printf("[main] Start processing config for venue: %s\n", config.Venue)
+                fmt.Printf("Start processing config for venue: %s\n", config.Venue)
                 results, err := processConfig(config)
                 if err != nil {
                     fmt.Println("Error processing config:", err)
                     continue
                 }
-                fmt.Printf("[main] Config processed successfully for venue: %s\n", config.Venue)
+                fmt.Printf("Config processed successfully for venue: %s\n", config.Venue)
                 // Compare the new results with existing results and send to Telegram
                 compareResults(results, existingResults)
 
