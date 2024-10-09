@@ -49,6 +49,29 @@ type Image struct {
     URL string `json:"url"`
 }
 
+type Category struct {
+    Slug          string        `json:"slug"`
+    Subcategories []Category `json:"subcategories"`
+}
+
+
+// types for search in store
+type StoreSearchResponse struct {
+    Categories       []SearchCategory `json:"categories"`
+    Items            []SearchItem     `json:"items"`
+}
+
+type SearchCategory struct {
+    ItemIDs []string `json:"item_ids"`
+}
+
+type SearchItem struct {
+	ID          string   `json:"id"`
+	Images      []Image  `json:"images"`
+	Name        string   `json:"name"`
+}
+
+
 // https://consumer-api.wolt.com/v1/pages/retail?lat=41.7024604154103&lon=44.7965812683105
 
 type WoltConnector struct {
@@ -118,9 +141,36 @@ func (wc *WoltConnector) getCategoryByProduct(storeSlug string, productName stri
 		return
 	}
 	defer response.Body.Close()
-
 }
 
+func (wc *WoltConnector) searchProductInStore(storeSlug string, product string) ([]SearchItem, error) {
+	// Implementation will go here
+	storeBaseUrl := "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug"
+	sroteSearchUrl := fmt.Sprintf("%s/%s/assortment/items/search", storeBaseUrl, storeSlug)
+	response, err := http.Post(sroteSearchUrl, "application/json", strings.NewReader(fmt.Sprintf(`{"q":"%s"}`, product)))
+	if err != nil {
+		fmt.Printf("Error fetching categories: %v\n", err)
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		fmt.Printf("Error reading response body: %v\n", err)
+		return nil, err
+	}
+
+	var searchResponse StoreSearchResponse
+	err = json.Unmarshal(body, &searchResponse)
+	if err != nil {
+		fmt.Printf("Error parsing search response: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("Search response: %v\n", searchResponse)
+
+	// TODO: add category slug to each item
+	return searchResponse.Items, nil
+}
 func main() {
 	wc := SetWoltConnector("tbilisi")
 	stores, err := wc.getStoreByName("gastronome")
@@ -129,4 +179,10 @@ func main() {
 		return
 	}
 	fmt.Printf("Stores: %v\n", stores)
+	products, err := wc.searchProductInStore(stores[0].Venue.Slug, "kefir")
+	if err != nil {
+		fmt.Printf("Error searching product: %v\n", err)
+		return
+	}
+	fmt.Printf("Products: %v\n", products)
 }
