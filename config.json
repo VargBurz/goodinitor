@@ -1,4 +1,5 @@
 [
+    {"pupa": "lupa"},
   {
     "venue": "Bubble Tea",
     "endpoint": "https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/mao-bubble-tea/assortment",
